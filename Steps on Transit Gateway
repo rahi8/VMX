@@ -1,0 +1,114 @@
+Setup Meraki VMX using Transit Gateway for scalability across virtual private clouds (VPCs) with workloads in multiple AWS Regions
+
+There are certain cases, Cx wants to use only one VMX for their whole infrastructure.
+
+We can achieve this using Transit Gateway, as it also provides scalability for future infrastructure
+
+We know Transitive VPC Peering behavior is not supported, so we use Transit Gateway,
+
+
+
+I will explain the whole setup procedure for VMX, when we use Transit Gateway
+
+
+
+On Prem Network
+10.0.0.0/16
+
+
+VPC A	172.20.0.0/16
+VPC_A Public_Subnet
+172.20.0.0/20
+VMX IP
+172.20.2.203
+VPC_A Private_Subnet
+172.20.10.0/24
+
+
+VPC B	192.168.0.0/16
+VPC_B Private_Subnet
+192.168.0.0/24
+
+Scenario 1) Private Subnet Wants to reach On Prem Network
+Any Workloads/Instances present in Private Subnet can reach the On-Prem Network via Meraki VMX 
+
+As the Route Table mentions if the destination is 10.0.0.0/16, route to Meraki VMX
+
+
+
+
+
+Scenario 2) Private_Subent in VPC B wants to reach On Prem Network
+We create a Transit Gateway
+
+We will create two Transit Gateway Attachments (TGW_A and TGW_B)
+
+TGW_A: VPC_A Private Subnet
+
+TGW_B: VPC_B Private Subnet
+
+
+
+We will create two Transit Gateway Route Table (TGW_RT_A and TGW_RT_B)
+
+We will attach TGW_A to TGW_RT_A and TGW_B to TGW_RT_B.
+
+
+
+We will propagate TGW_B to TGW_RT_A and TGW_A to TGW_RT_B.
+
+
+
+VPC_B_Private_Subnet: Modify the route table
+
+Destination
+Target
+10.0.0.0/16 
+Transit Gateway (TGW_B)
+
+
+VPC_A_Private_Subnet: Modify the route table
+
+Destination
+Target
+192.168.0.0/16 
+Transit Gateway (TGW_A)
+
+
+***Source Initiates Traffic***
+When Workloads/EC2 in VPCB_Private Subnet will initiate the traffic to 10.0.0.0/16
+
+Routing Path :  Workloads/EC2 > TGW_B > TGW_A > Meraki VMX
+
+
+
+
+
+
+
+***Return Traffic from VMX***
+
+
+
+
+
+
+Routing Path :  Internet > Meraki VMX > TGW_A > TGW_B > EC2/Workloads
+
+
+
+***Configuration on Meraki VMX***
+VMX Site to Site VPN
+
+Local Network
+ Subnet
+VPC B
+192.168.0.0/16
+VPC A
+172.20.0.0/16
+References   
+
+[1]: https://aws.amazon.com/quickstart/architecture/cisco-meraki-vmx/
+
+[2]: https://community.meraki.com/t5/Security-SD-WAN/VMX-100-communication-with-multiple-AWS-account-and-VPCs/m-p/14712
+
